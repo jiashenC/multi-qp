@@ -5,20 +5,23 @@ import numpy as np
 import os
 from torchvision import datasets
 import matplotlib
+
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+
 #######################################################################
 # Evaluate
 parser = argparse.ArgumentParser(description='Demo')
 parser.add_argument('--query_index', default=777, type=int, help='test_image_index')
-parser.add_argument('--test_dir',default='../Market/pytorch',type=str, help='./test_data')
+parser.add_argument('--test_dir', default='../Market/pytorch', type=str, help='./test_data')
 opts = parser.parse_args()
 
 data_dir = opts.test_dir
-image_datasets = {x: datasets.ImageFolder( os.path.join(data_dir,x) ) for x in ['gallery','query']}
+image_datasets = {x: datasets.ImageFolder(os.path.join(data_dir, x)) for x in ['gallery', 'query']}
+
 
 #####################################################################
-#Show result
+# Show result
 def imshow(path, title=None):
     """Imshow for Tensor."""
     im = plt.imread(path)
@@ -26,6 +29,7 @@ def imshow(path, title=None):
     if title is not None:
         plt.title(title)
     plt.pause(0.001)  # pause a bit so that plots are updated
+
 
 ######################################################################
 result = scipy.io.loadmat('pytorch_result.mat')
@@ -48,34 +52,36 @@ if multi:
 query_feature = query_feature.cuda()
 gallery_feature = gallery_feature.cuda()
 
+
 #######################################################################
 # sort the images
 def sort_img(qf, ql, qc, gf, gl, gc):
-    query = qf.view(-1,1)
+    query = qf.view(-1, 1)
     # print(query.shape)
-    score = torch.mm(gf,query)
+    score = torch.mm(gf, query)
     score = score.squeeze(1).cpu()
     score = score.numpy()
     # predict index
-    index = np.argsort(score)  #from small to large
+    index = np.argsort(score)  # from small to large
     index = index[::-1]
     # index = index[0:2000]
     # good index
-    query_index = np.argwhere(gl==ql)
-    #same camera
-    camera_index = np.argwhere(gc==qc)
+    query_index = np.argwhere(gl == ql)
+    # same camera
+    camera_index = np.argwhere(gc == qc)
 
-    #good_index = np.setdiff1d(query_index, camera_index, assume_unique=True)
-    junk_index1 = np.argwhere(gl==-1)
+    # good_index = np.setdiff1d(query_index, camera_index, assume_unique=True)
+    junk_index1 = np.argwhere(gl == -1)
     junk_index2 = np.intersect1d(query_index, camera_index)
-    junk_index = np.append(junk_index2, junk_index1) 
+    junk_index = np.append(junk_index2, junk_index1)
 
     mask = np.in1d(index, junk_index, invert=True)
     index = index[mask]
     return index
 
+
 i = opts.query_index
-index = sort_img(query_feature[i],query_label[i],query_cam[i],gallery_feature,gallery_label,gallery_cam)
+index = sort_img(query_feature[i], query_label[i], query_cam[i], gallery_feature, gallery_label, gallery_cam)
 
 ########################################################################
 # Visualize the rank result
@@ -84,22 +90,22 @@ query_path, _ = image_datasets['query'].imgs[i]
 query_label = query_label[i]
 print(query_path)
 print('Top 10 images are as follow:')
-try: # Visualize Ranking Result 
+try:  # Visualize Ranking Result
     # Graphical User Interface is needed
-    fig = plt.figure(figsize=(16,4))
-    ax = plt.subplot(1,11,1)
+    fig = plt.figure(figsize=(16, 4))
+    ax = plt.subplot(1, 11, 1)
     ax.axis('off')
-    imshow(query_path,'query')
+    imshow(query_path, 'query')
     for i in range(10):
-        ax = plt.subplot(1,11,i+2)
+        ax = plt.subplot(1, 11, i + 2)
         ax.axis('off')
         img_path, _ = image_datasets['gallery'].imgs[index[i]]
         label = gallery_label[index[i]]
         imshow(img_path)
         if label == query_label:
-            ax.set_title('%d'%(i+1), color='green')
+            ax.set_title('%d' % (i + 1), color='green')
         else:
-            ax.set_title('%d'%(i+1), color='red')
+            ax.set_title('%d' % (i + 1), color='red')
         print(img_path)
 except RuntimeError:
     for i in range(10):
